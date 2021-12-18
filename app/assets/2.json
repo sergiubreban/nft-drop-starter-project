@@ -1,0 +1,19 @@
+{
+  "name": "test",
+  "symbol": "",
+  "image": "2.png",
+  "properties": {
+    "files": [
+      {
+        "uri": "2.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": [
+      {
+        "address": "Ach9g4U2dwfZZy6a5YwhRf5Agdxp6r6AV81Bm2uLmP59",
+        "share": 200
+      }
+    ]
+  }
+}

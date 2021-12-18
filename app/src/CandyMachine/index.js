@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Program, Provider, web3 } from '@project-serum/anchor';
+import { Program, web3 } from '@project-serum/anchor';
 import { MintLayout, TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import { programs } from '@metaplex/js';
 import './CandyMachine.css';
@@ -9,15 +9,14 @@ import {
   TOKEN_METADATA_PROGRAM_ID,
   SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
 } from './helpers';
+import { getCandyMachineState, getProvider } from '../utils';
+import CountdownTimer from '../CountdownTimer';
 const {
   metadata: { Metadata, MetadataProgram },
 } = programs;
 
 const config = new web3.PublicKey(process.env.REACT_APP_CANDY_MACHINE_CONFIG);
 const { SystemProgram } = web3;
-const opts = {
-  preflightCommitment: 'processed',
-};
 
 const MAX_NAME_LENGTH = 32;
 const MAX_URI_LENGTH = 200;
@@ -25,6 +24,38 @@ const MAX_SYMBOL_LENGTH = 10;
 const MAX_CREATOR_LEN = 32 + 1 + 1;
 
 const CandyMachine = ({ walletAddress }) => {
+  const [machineStats, setMachineStats] = useState(null);
+  const [mints, setMints] = useState([]);
+  const [isMinting, setIsMinting] = useState(false);
+  const [isLoadingMints, setIsLoadingMints] = useState(false);
+
+  useEffect(() => {
+    const runAsync = async () => {
+      setMachineStats(await getCandyMachineState());
+      setIsLoadingMints(true)
+      const data = await fetchHashTable(
+        process.env.REACT_APP_CANDY_MACHINE_ID,
+        true
+      );
+      let mints = []
+      if (data.length !== 0) {
+        for (const mint of data) {
+          // Get URI
+          const response = await fetch(mint.data.uri);
+          const parse = await response.json();
+          console.log("Past Minted NFT", mint)
+
+          // Get image URI
+          if (!mints.find((mint) => mint === parse.image)) {
+            setMints((prevState) => [...prevState, parse.image]);
+          }
+        }
+      }
+      setIsLoadingMints(false)
+    }
+    runAsync()
+  }, []);
+
   // Actions
   const fetchHashTable = async (hash, metadataEnabled) => {
     const connection = new web3.Connection(
@@ -109,6 +140,7 @@ const CandyMachine = ({ walletAddress }) => {
 
   const mintToken = async () => {
     try {
+      setIsMinting(true);
       const mint = web3.Keypair.generate();
       const token = await getTokenWallet(
         walletAddress.publicKey,
@@ -192,7 +224,9 @@ const CandyMachine = ({ walletAddress }) => {
 
             const { result } = notification;
             if (!result.err) {
+              setIsMinting(false);
               console.log('NFT Minted!');
+              setMachineStats(await getCandyMachineState());
             }
           }
         },
@@ -200,6 +234,7 @@ const CandyMachine = ({ walletAddress }) => {
       );
     } catch (error) {
       let message = error.msg || 'Minting failed! Please try again!';
+      setIsMinting(false);
 
       if (!error.msg) {
         if (error.message.indexOf('0x138')) {
@@ -249,14 +284,48 @@ const CandyMachine = ({ walletAddress }) => {
       data: Buffer.from([]),
     });
   };
+  const renderDropTimer = () => {
+    // Get the current date and dropDate in a JavaScript Date object
+    const currentDate = new Date();
+    const dropDate = new Date(machineStats.goLiveData * 1000);
 
-  return (
+    // If currentDate is before dropDate, render our Countdown component
+    if (currentDate < dropDate) {
+      console.log('Before drop date!');
+      // Don't forget to pass over your dropDate!
+      return <CountdownTimer dropDate={ dropDate } />;
+    }
+
+    // Else let's just return the current drop date
+    return <p>{ `Drop Date: ${machineStats.goLiveDateTimeString}` }</p>;
+  };
+  return (machineStats &&
     <div className="machine-container">
-      <p>Drop Date:</p>
-      <p>Items Minted:</p>
-      <button className="cta-button mint-button" onClick={mintToken}>
-        Mint NFT
-      </button>
+      {/* <p>{ `Drop Date: ${machineStats?.goLiveDateTimeString}` }</p> */ }
+      { renderDropTimer() }
+      <p>{ `Items Minted: ${machineStats?.itemsRedeemed} / ${machineStats?.itemsAvailable}` }</p>
+      { machineStats.itemsRedeemed === machineStats.itemsAvailable ? (
+        <p className="sub-text">Sold Out 🙊</p>
+      ) : (
+        <button
+          className="cta-button mint-button"
+          onClick={ mintToken }
+          disabled={ isMinting }
+        >
+          Mint NFT
+        </button>
+      ) }
+      { isLoadingMints && <p>Loading MINTS...</p> }
+      { mints?.length > 0 && <div className="gif-container">
+        <p className="sub-text">Minted Items ✨</p>
+        <div className="gif-grid">
+          { mints.map((mint) => (
+            <div className="gif-item" key={ mint }>
+              <img src={ mint } alt={ `Minted NFT ${mint}` } />
+            </div>
+          )) }
+        </div>
+      </div> }
     </div>
   );
 };

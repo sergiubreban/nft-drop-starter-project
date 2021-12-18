@@ -1,0 +1,19 @@
+{
+  "name": "wface/w",
+  "symbol": "",
+  "image": "1.png",
+  "properties": {
+    "files": [
+      {
+        "uri": "1.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": [
+      {
+        "address": "Ach9g4U2dwfZZy6a5YwhRf5Agdxp6r6AV81Bm2uLmP59",
+        "share": 150
+      }
+    ]
+  }
+}
