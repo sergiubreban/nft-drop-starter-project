@@ -12,7 +12,7 @@ import {
 import { getCandyMachineState, getProvider } from '../utils';
 import CountdownTimer from '../CountdownTimer';
 const {
-  metadata: { Metadata, MetadataProgram },
+  metadata: { Metadata, MetadataProgram } = {},
 } = programs;
 
 const config = new web3.PublicKey(process.env.REACT_APP_CANDY_MACHINE_CONFIG);
@@ -62,7 +62,7 @@ const CandyMachine = ({ walletAddress }) => {
       process.env.REACT_APP_SOLANA_RPC_HOST
     );
 
-    const metadataAccounts = await MetadataProgram.getProgramAccounts(
+    const metadataAccounts = await MetadataProgram?.getProgramAccounts?.(
       connection,
       {
         filters: [
@@ -91,7 +91,7 @@ const CandyMachine = ({ walletAddress }) => {
 
     const mintHashes = [];
 
-    for (let index = 0; index < metadataAccounts.length; index++) {
+    for (let index = 0; index < metadataAccounts?.length; index++) {
       const account = metadataAccounts[index];
       const accountInfo = await connection.getParsedAccountInfo(account.pubkey);
       const metadata = new Metadata(hash.toString(), accountInfo.value);
